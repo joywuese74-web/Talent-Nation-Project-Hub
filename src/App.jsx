@@ -426,27 +426,47 @@ export default function App() {
   const [recentProjects, setRecentProjects] = useState([]);
   const mapProjectRow = (row) => {
     const campus = CAMPUSES.find((c) => c.dbId === row.campus_id);
+    const mockMatch = PROJECTS.find((p) => p.id === row.id || p.id === row.slug);
+    const rawCollaborators = row.collaborators || mockMatch?.collaborators || [];
+    const collaborators = rawCollaborators.length > 0 ? rawCollaborators : (
+      (row.fellow_ids || mockMatch?.fellowIds || []).map((fid) => ({
+        id: fid,
+        name: fellowName(fid),
+        role: "",
+      }))
+    );
+    const fellowIds = row.fellow_ids || (collaborators.map((c) => c.id || c.fellowId).filter(Boolean).length > 0
+      ? collaborators.map((c) => c.id || c.fellowId).filter(Boolean)
+      : mockMatch?.fellowIds || (row.created_by ? [row.created_by] : []));
+    const teamType = row.team_type || mockMatch?.teamType || (collaborators.length > 1 ? "Team" : "Individual");
+
     return {
       id: row.id,
       title: row.title,
-      campusId: campus?.id || null,
-      fellowIds: [],
-      category: row.category || "",
-      technologies: row.technologies || [],
-      status: row.status || "Ongoing",
-      year: row.year || new Date().getFullYear(),
-      views: row.views || 0,
-      likes: 0,
-      shortDesc: row.short_description || "",
-      problem: row.problem_statement || "",
-      solution: row.solution || "",
-      objectives: row.objectives || "",
-      audience: row.target_audience || "",
-      challenges: "", results: "", impact: "", future: "",
-      github: row.github_url || "#",
-      demo: row.demo_url || "#",
-      cover: row.cover_image_url || null,
+      campusId: campus?.id || mockMatch?.campusId || null,
+      fellowIds,
+      collaborators,
+      teamType,
+      category: row.category || mockMatch?.category || "",
+      technologies: row.technologies || mockMatch?.technologies || [],
+      status: row.status || mockMatch?.status || "Ongoing",
+      year: row.year || mockMatch?.year || new Date().getFullYear(),
+      views: row.views || mockMatch?.views || 0,
+      likes: mockMatch?.likes || 0,
+      shortDesc: row.short_description || mockMatch?.shortDesc || "",
+      problem: row.problem_statement || mockMatch?.problem || "",
+      solution: row.solution || mockMatch?.solution || "",
+      objectives: row.objectives || mockMatch?.objectives || "",
+      audience: row.target_audience || mockMatch?.audience || "",
+      challenges: mockMatch?.challenges || "",
+      results: mockMatch?.results || "",
+      impact: mockMatch?.impact || "",
+      future: mockMatch?.future || "",
+      github: row.github_url || mockMatch?.github || "#",
+      demo: row.demo_url || mockMatch?.demo || "#",
+      cover: row.cover_image_url || mockMatch?.cover || null,
       createdAt: row.created_at || null,
+      createdBy: row.created_by || null,
     };
   };
 
@@ -556,7 +576,7 @@ export default function App() {
 
       {view === "home" && <HomePage go={go} openProject={openProject} liked={liked} bookmarked={bookmarked} onLike={onLike} onBookmark={onBookmark} recentProjects={recentProjects} campusStats={campusStats} />}
       {view === "explore" && <ExplorePage go={go} openProject={openProject} liked={liked} bookmarked={bookmarked} onLike={onLike} onBookmark={onBookmark} projects={exploreProjects} loading={loadingExplore} />}
-      {view === "project" && <ProjectDetailPage project={project} go={go} openFellow={openFellow} liked={liked} bookmarked={bookmarked} onLike={onLike} onBookmark={onBookmark} />}
+      {view === "project" && <ProjectDetailPage project={project} go={go} openFellow={openFellow} liked={liked} bookmarked={bookmarked} onLike={onLike} onBookmark={onBookmark} allFellows={fellows} />}
       {view === "fellows" && <FellowsPage go={go} openFellow={openFellow} fellows={fellows} projectCounts={projectCounts} loadingFellows={loadingFellows} />}
       {view === "fellow" && <FellowProfilePage fellow={fellow} go={go} openProject={openProject} />}
       {view === "campuses" && <CampusesPage go={go} campusStats={campusStats} />}
@@ -602,6 +622,7 @@ export default function App() {
           isMentor={isMentorUser}
           profile={profile}
           mentorCampusId={myMentorships[0]?.campus_id || null}
+          allFellows={fellows}
         />
       )}
 

@@ -1,4 +1,4 @@
-import { Bookmark, Eye, Heart } from "lucide-react";
+import { Bookmark, Eye, Heart, User, Users } from "lucide-react";
 import { fellowName, getCampus } from "../lib/data";
 import { C } from "../lib/theme";
 import { Badge, GhostButton, StatusDot } from "./ui";
@@ -7,6 +7,13 @@ import { Badge, GhostButton, StatusDot } from "./ui";
 
 export function ProjectCard({ project, onOpen, liked, bookmarked, onLike, onBookmark, big }) {
   const campus = getCampus(project.campusId);
+  const collaborators = project.collaborators || [];
+  const isTeam = project.teamType === "Team" || collaborators.length > 1;
+
+  const teamDisplay = collaborators.length > 0
+    ? collaborators.map((c) => c.name + (c.role ? ` (${c.role})` : "")).join(" · ")
+    : (project.fellowIds || []).map(fellowName).join(", ");
+
   return (
     <div
       style={{
@@ -24,7 +31,12 @@ export function ProjectCard({ project, onOpen, liked, bookmarked, onLike, onBook
           position: "relative", display: "flex", alignItems: "flex-end", padding: 16,
         }}
       >
-        <div style={{ position: "absolute", top: 14, right: 14 }}>
+        <div style={{ position: "absolute", top: 14, right: 14, display: "flex", gap: 6 }}>
+          {isTeam && (
+            <Badge tone="teal" style={{ background: "rgba(255,255,255,0.92)", color: C.ink, boxShadow: "0 2px 6px rgba(0,0,0,0.15)" }}>
+              <Users size={11} /> Team
+            </Badge>
+          )}
           <Badge tone="gold">{project.category}</Badge>
         </div>
         <p className="tn-display" style={{ color: "rgba(255,255,255,0.9)", fontSize: big ? 22 : 17, fontWeight: 700, margin: 0, maxWidth: "80%" }}>
@@ -38,12 +50,18 @@ export function ProjectCard({ project, onOpen, liked, bookmarked, onLike, onBook
           <span style={{ color: C.slateLight }}>·</span>
           <span style={{ color: C.slateLight }}>{campus?.city}</span>
         </div>
-        <p className="tn-body" style={{ fontSize: 13.5, color: C.slate, lineHeight: 1.55, margin: "0 0 12px", flex: 1 }}>
+        <p className="tn-body" style={{ fontSize: 13.5, color: C.slate, lineHeight: 1.55, margin: "0 0 10px", flex: 1 }}>
           {project.shortDesc}
         </p>
-        <p className="tn-body" style={{ fontSize: 12.5, color: C.slateLight, margin: "0 0 12px" }}>
-          {project.fellowIds.map(fellowName).join(", ")}
-        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12, flexWrap: "wrap", fontSize: 12 }} className="tn-body">
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: C.slateLight, fontWeight: 600 }}>
+            {isTeam ? <Users size={13} color={C.teal} /> : <User size={13} color={C.slateLight} />}
+            <span>{isTeam ? "Team:" : "By:"}</span>
+          </span>
+          <span style={{ color: C.slate, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "85%" }} title={teamDisplay}>
+            {teamDisplay}
+          </span>
+        </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
           {project.technologies.slice(0, 3).map((t) => (
             <Badge key={t}>{t}</Badge>

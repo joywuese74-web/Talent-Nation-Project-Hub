@@ -29,16 +29,21 @@ export function FellowProfilePage({ fellow, go, openProject }) {
     supabase
       .from("projects")
       .select("*")
-      .eq("created_by", fellow.id)
       .then(({ data, error }) => {
         setLoadingProjects(false);
         if (error) {
           console.error("Failed to load this fellow's projects:", error);
           return;
         }
-        setProjects(data || []);
+        const filtered = (data || []).filter(
+          (p) =>
+            p.created_by === fellow.id ||
+            p.fellow_ids?.includes(fellow.id) ||
+            p.collaborators?.some((c) => c.id === fellow.id || c.name?.toLowerCase() === fellow.name?.toLowerCase())
+        );
+        setProjects(filtered);
       });
-  }, [fellow?.id]);
+  }, [fellow?.id, fellow?.name]);
 
   if (!fellow) return null;
   const campus = getCampus(fellow.campusId);
@@ -88,12 +93,22 @@ export function FellowProfilePage({ fellow, go, openProject }) {
             <p className="tn-body" style={{ fontSize: 13.5, color: C.slateLight }}>No projects submitted yet.</p>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              {projects.map((p) => (
-                <div key={p.id} onClick={() => openProject(p.id)} style={{ cursor: "pointer", border: `1px solid ${C.line}`, borderRadius: 14, padding: 16 }}>
-                  <p className="tn-display" style={{ fontWeight: 700, fontSize: 14, margin: "0 0 4px" }}>{p.title}</p>
-                  <p className="tn-body" style={{ fontSize: 12.5, color: C.slateLight, margin: 0 }}>{p.category} · {p.status}</p>
-                </div>
-              ))}
+              {projects.map((p) => {
+                const userCollab = p.collaborators?.find((c) => c.id === fellow.id || c.name?.toLowerCase() === fellow.name?.toLowerCase());
+                return (
+                  <div key={p.id} onClick={() => openProject(p.id)} style={{ cursor: "pointer", border: `1px solid ${C.line}`, borderRadius: 14, padding: 16, background: C.white }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 4 }}>
+                      <p className="tn-display" style={{ fontWeight: 700, fontSize: 14, margin: 0, color: C.ink }}>{p.title}</p>
+                      {userCollab?.role && (
+                        <span style={{ fontSize: 11, background: C.goldPale, color: C.goldDeep, padding: "2px 6px", borderRadius: 6, fontWeight: 600, flexShrink: 0 }}>
+                          {userCollab.role}
+                        </span>
+                      )}
+                    </div>
+                    <p className="tn-body" style={{ fontSize: 12.5, color: C.slateLight, margin: 0 }}>{p.category} · {p.status}</p>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
