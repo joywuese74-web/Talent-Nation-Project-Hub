@@ -359,6 +359,8 @@ export default function App() {
   const [fellows, setFellows] = useState([]);
   const [loadingFellows, setLoadingFellows] = useState(true);
   const [projectCounts, setProjectCounts] = useState({});
+  // Per-fellow counts by project status, e.g. { [userId]: { Completed: 2, Ongoing: 1 } }.
+  const [projectStatusCounts, setProjectStatusCounts] = useState({});
   const [allProjectsLite, setAllProjectsLite] = useState([]);
 
   // Real per-campus totals (by campus slug) for the home page, the campuses
@@ -405,7 +407,7 @@ export default function App() {
 
     supabase
       .from("projects")
-      .select("id, created_by, campus_id")
+      .select("id, created_by, campus_id, status")
       .eq("is_portfolio", false)
       .then(({ data, error }) => {
         if (error) {
@@ -414,11 +416,17 @@ export default function App() {
         }
         setAllProjectsLite(data || []);
         const counts = {};
+        const statusCounts = {};
         (data || []).forEach((row) => {
           if (!row.created_by) return;
           counts[row.created_by] = (counts[row.created_by] || 0) + 1;
+          if (row.status) {
+            const byStatus = statusCounts[row.created_by] || (statusCounts[row.created_by] = {});
+            byStatus[row.status] = (byStatus[row.status] || 0) + 1;
+          }
         });
         setProjectCounts(counts);
+        setProjectStatusCounts(statusCounts);
       });
   };
   useEffect(fetchFellows, []);
@@ -577,7 +585,7 @@ export default function App() {
       {view === "home" && <HomePage go={go} openProject={openProject} liked={liked} bookmarked={bookmarked} onLike={onLike} onBookmark={onBookmark} recentProjects={recentProjects} campusStats={campusStats} />}
       {view === "explore" && <ExplorePage go={go} openProject={openProject} liked={liked} bookmarked={bookmarked} onLike={onLike} onBookmark={onBookmark} projects={exploreProjects} loading={loadingExplore} />}
       {view === "project" && <ProjectDetailPage project={project} go={go} openFellow={openFellow} liked={liked} bookmarked={bookmarked} onLike={onLike} onBookmark={onBookmark} allFellows={fellows} />}
-      {view === "fellows" && <FellowsPage go={go} openFellow={openFellow} fellows={fellows} projectCounts={projectCounts} loadingFellows={loadingFellows} />}
+      {view === "fellows" && <FellowsPage go={go} openFellow={openFellow} fellows={fellows} projectCounts={projectCounts} projectStatusCounts={projectStatusCounts} loadingFellows={loadingFellows} />}
       {view === "fellow" && <FellowProfilePage fellow={fellow} go={go} openProject={openProject} />}
       {view === "campuses" && <CampusesPage go={go} campusStats={campusStats} />}
       {view === "mentors" && <CodingMentorsPage openFellow={openFellow} allFellows={fellows} />}
