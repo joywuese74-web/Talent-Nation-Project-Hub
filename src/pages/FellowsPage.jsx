@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { MapPin, Search } from "lucide-react";
 import { C } from "../lib/theme";
-import { Avatar, Badge, SectionHeading } from "../components/ui";
-import { CAMPUSES, getCampus } from "../lib/data";
+import { Avatar, Badge, SectionHeading, StatusDot } from "../components/ui";
+import { CAMPUSES, STATUSES, getCampus } from "../lib/data";
 
 /* ----------------------------------- fellows ---------------------------------- */
 
-export function FellowsPage({ go, openFellow, fellows: everyone, projectCounts, loadingFellows }) {
+export function FellowsPage({ go, openFellow, fellows: everyone, projectCounts, projectStatusCounts = {}, loadingFellows }) {
   // Mentors and Heads of Campus have their own page (Coding Mentors).
   const fellows = everyone.filter((f) => !f.isMentor);
   const [query, setQuery] = useState("");
@@ -48,6 +48,8 @@ export function FellowsPage({ go, openFellow, fellows: everyone, projectCounts, 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
             {filtered.map((f) => {
               const campusObj = getCampus(f.campusId);
+              const byStatus = projectStatusCounts[f.id] || {};
+              const statusBreakdown = STATUSES.filter((s) => byStatus[s] > 0);
               return (
                 <div key={f.id} onClick={() => openFellow(f.id)} style={{ cursor: "pointer", border: `1px solid ${C.line}`, borderRadius: 16, padding: 18, background: C.white }}>
                   <Avatar name={f.name} size={44} hue={campusObj?.hue || C.teal} photo={f.avatarUrl} />
@@ -57,8 +59,17 @@ export function FellowsPage({ go, openFellow, fellows: everyone, projectCounts, 
                     {f.skills.slice(0, 2).map((s) => <Badge key={s}>{s}</Badge>)}
                   </div>
                   <p className="tn-body" style={{ fontSize: 12, color: C.slate, display: "flex", alignItems: "center", gap: 4, margin: 0 }}>
-                    <MapPin size={11} /> {f.city || campusObj?.city || "—"} · {projectCounts[f.id] || 0} projects
+                    <MapPin size={11} /> {f.city || campusObj?.city || "—"} · {projectCounts[f.id] || 0} {projectCounts[f.id] === 1 ? "project" : "projects"}
                   </p>
+                  {statusBreakdown.length > 0 && (
+                    <div className="tn-body" style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px", marginTop: 10, fontSize: 11.5, color: C.slate }}>
+                      {statusBreakdown.map((s) => (
+                        <span key={s} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                          <StatusDot status={s} /> {s}: {byStatus[s]}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
