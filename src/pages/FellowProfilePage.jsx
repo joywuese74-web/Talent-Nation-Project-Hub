@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
+import { fetchAll } from "../lib/fetchAll";
 import { ArrowLeft, Code2, Link2, MapPin } from "lucide-react";
 import { CAMPUSES, getCampus } from "../lib/data";
 import { Avatar, Badge, GhostButton, PhotoLightbox } from "../components/ui";
@@ -26,9 +27,8 @@ export function FellowProfilePage({ fellow, go, openProject }) {
   useEffect(() => {
     if (!fellow) return;
     setLoadingProjects(true);
-    supabase
-      .from("projects")
-      .select("*")
+    // fetchAll loads in batches, so projects beyond the first 1,000 are included.
+    fetchAll(() => supabase.from("projects").select("*").order("id"))
       .then(({ data, error }) => {
         setLoadingProjects(false);
         if (error) {

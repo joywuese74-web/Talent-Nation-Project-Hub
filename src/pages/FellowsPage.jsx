@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { MapPin, Search } from "lucide-react";
 import { C } from "../lib/theme";
-import { Avatar, Badge, SectionHeading, StatusDot } from "../components/ui";
+import { Avatar, Badge, GhostButton, SectionHeading, StatusDot } from "../components/ui";
 import { CAMPUSES, STATUSES, getCampus } from "../lib/data";
 
 /* ----------------------------------- fellows ---------------------------------- */
+
+// How many fellow cards to show at first, and how many more each "Load more" adds.
+const PAGE_SIZE = 24;
 
 export function FellowsPage({ go, openFellow, fellows: everyone, projectCounts, projectStatusCounts = {}, loadingFellows }) {
   // Mentors and Heads of Campus have their own page (Coding Mentors).
@@ -12,14 +15,20 @@ export function FellowsPage({ go, openFellow, fellows: everyone, projectCounts, 
   const [query, setQuery] = useState("");
   const [campus, setCampus] = useState("All");
   const [skill, setSkill] = useState("All");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  // Changing the search or a filter starts again from the first page.
+  const resetPaging = () => setVisibleCount(PAGE_SIZE);
   const allSkills = Array.from(new Set(fellows.flatMap((f) => f.skills)));
 
   const filtered = fellows.filter((f) => {
-    const matchQuery = query.trim() === "" || f.name.toLowerCase().includes(query.toLowerCase());
+    const q = query.trim().toLowerCase();
+    const matchQuery = q === "" || f.name.toLowerCase().includes(q) || (f.userName || "").toLowerCase().includes(q);
     const matchCampus = campus === "All" || f.campusId === campus;
     const matchSkill = skill === "All" || f.skills.includes(skill);
     return matchQuery && matchCampus && matchSkill;
   });
+
+  const shown = filtered.slice(0, visibleCount);
 
   const selectStyle = { padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13, background: C.white };
 
@@ -29,13 +38,13 @@ export function FellowsPage({ go, openFellow, fellows: everyone, projectCounts, 
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 28 }}>
         <div style={{ position: "relative", flex: "1 1 260px" }}>
           <Search size={16} color={C.slateLight} style={{ position: "absolute", left: 12, top: 12 }} />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search fellows by name" className="tn-body" style={{ width: "100%", padding: "10px 12px 10px 36px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13.5, boxSizing: "border-box" }} />
+          <input value={query} onChange={(e) => { setQuery(e.target.value); resetPaging(); }} placeholder="Search fellows by name or username" className="tn-body" style={{ width: "100%", padding: "10px 12px 10px 36px", borderRadius: 10, border: `1px solid ${C.line}`, fontSize: 13.5, boxSizing: "border-box" }} />
         </div>
-        <select value={campus} onChange={(e) => setCampus(e.target.value)} className="tn-body" style={selectStyle}>
+        <select value={campus} onChange={(e) => { setCampus(e.target.value); resetPaging(); }} className="tn-body" style={selectStyle}>
           <option value="All">All campuses</option>
           {CAMPUSES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <select value={skill} onChange={(e) => setSkill(e.target.value)} className="tn-body" style={selectStyle}>
+        <select value={skill} onChange={(e) => { setSkill(e.target.value); resetPaging(); }} className="tn-body" style={selectStyle}>
           <option value="All">All skills</option>
           {allSkills.map((s) => <option key={s}>{s}</option>)}
         </select>
@@ -44,9 +53,9 @@ export function FellowsPage({ go, openFellow, fellows: everyone, projectCounts, 
         <p className="tn-body" style={{ fontSize: 13.5, color: C.slateLight }}>Loading…</p>
       ) : (
         <>
-          <p className="tn-body" style={{ fontSize: 13, color: C.slateLight, marginBottom: 20 }}>{filtered.length} fellow{filtered.length !== 1 ? "s" : ""} found</p>
+          <p className="tn-body" style={{ fontSize: 13, color: C.slateLight, marginBottom: 20 }}>{filtered.length} fellow{filtered.length !== 1 ? "s" : ""} found{filtered.length > shown.length ? ` · showing ${shown.length}` : ""}</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
-            {filtered.map((f) => {
+            {shown.map((f) => {
               const campusObj = getCampus(f.campusId);
               const byStatus = projectStatusCounts[f.id] || {};
               const statusBreakdown = STATUSES.filter((s) => byStatus[s] > 0);
@@ -74,6 +83,13 @@ export function FellowsPage({ go, openFellow, fellows: everyone, projectCounts, 
               );
             })}
           </div>
+          {filtered.length > shown.length && (
+            <div style={{ display: "flex", justifyContent: "center", marginTop: 28 }}>
+              <GhostButton onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}>
+                Load more fellows ({filtered.length - shown.length} more)
+              </GhostButton>
+            </div>
+          )}
         </>
       )}
     </div>

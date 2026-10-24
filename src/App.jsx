@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
+import { fetchAll } from "./lib/fetchAll";
 import { DISCORD_FUNCTION } from "./lib/constants";
 import { ANCHORS, CAMPUSES, PROJECTS, fellowsByCampus, getCampus } from "./lib/data";
 import { C, FONTS } from "./lib/theme";
@@ -372,10 +373,31 @@ export default function App() {
     if (c) campusStats.projects[c.id] = (campusStats.projects[c.id] || 0) + 1;
   });
 
+  // Turn a row from the "profiles" table into the shape the pages use.
+  const mapProfileRow = (row, mentorIds) => {
+    const campus = CAMPUSES.find((c) => c.dbId === row.campus_id);
+    const isMentor = row.member_type === "mentor" || mentorIds.has(row.id);
+    return {
+      id: row.id,
+      name: row.full_name || "Fellow",
+      userName: row.user_name || null,
+      avatarUrl: row.avatar_url || null,
+      isMentor,
+      title: isMentor ? (row.title || "Mentor") : "Fellow",
+      city: row.city || "",
+      campusId: campus?.id || null,
+      skills: row.skills || [],
+      bio: row.bio || "",
+      linkedin: row.linkedin_url || null,
+      github: row.github_url || null,
+    };
+  };
+
   const fetchFellows = () => {
+    // fetchAll loads in batches, so there is no 1,000-person limit.
     Promise.all([
-      supabase.from("profiles").select("*"),
-      supabase.from("campus_mentors").select("user_id"),
+      fetchAll(() => supabase.from("profiles").select("*").order("id")),
+      fetchAll(() => supabase.from("campus_mentors").select("user_id").order("user_id")),
     ]).then(([{ data, error }, mentorRes]) => {
         const mentorIds = new Set((mentorRes.data || []).map((m) => m.user_id));
         setLoadingFellows(false);
@@ -385,31 +407,17 @@ export default function App() {
         }
         const mapped = (data || [])
           .filter((row) => row.role !== "administrator" && row.role !== "super_administrator")
-          .map((row) => {
-            const campus = CAMPUSES.find((c) => c.dbId === row.campus_id);
-            return {
-              id: row.id,
-              name: row.full_name || "Fellow",
-              userName: row.user_name || null,
-              avatarUrl: row.avatar_url || null,
-              isMentor: row.member_type === "mentor" || mentorIds.has(row.id),
-              title: (row.member_type === "mentor" || mentorIds.has(row.id)) ? (row.title || "Mentor") : "Fellow",
-              city: row.city || "",
-              campusId: campus?.id || null,
-              skills: row.skills || [],
-              bio: row.bio || "",
-              linkedin: row.linkedin_url || null,
-              github: row.github_url || null,
-            };
-          });
+          .map((row) => mapProfileRow(row, mentorIds));
         setFellows(mapped);
       });
 
-    supabase
-      .from("projects")
-      .select("id, created_by, campus_id, status")
-      .eq("is_portfolio", false)
-      .then(({ data, error }) => {
+    fetchAll(() =>
+      supabase
+        .from("projects")
+        .select("id, created_by, campus_id, status")
+        .eq("is_portfolio", false)
+        .order("id"),
+    ).then(({ data, error }) => {
         if (error) {
           console.error("Failed to load project counts:", error);
           return;
@@ -558,6 +566,25 @@ export default function App() {
   };
   const openProject = (id) => go("project", id);
   const openFellow = (id) => go("fellow", id);
+
+  // If a profile isn't in the loaded list (e.g. opened from a link before the
+  // list finished loading), load that one person straight from the database.
+  const [fetchedFellow, setFetchedFellow] = useState(null);
+  useEffect(() => {
+    if (view !== "fellow" || !selectedId) return;
+    if (fellows.some((f) => f.id === selectedId)) return;
+    if (fetchedFellow?.id === selectedId) return;
+    Promise.all([
+      supabase.from("profiles").select("*").eq("id", selectedId).maybeSingle(),
+      supabase.from("campus_mentors").select("user_id").eq("user_id", selectedId),
+    ]).then(([{ data, error }, mentorRes]) => {
+      if (error || !data) {
+        if (error) console.error("Failed to load profile:", error);
+        return;
+      }
+      setFetchedFellow(mapProfileRow(data, new Set((mentorRes.data || []).map((m) => m.user_id))));
+    });
+  }, [view, selectedId, fellows, fetchedFellow?.id]);
   const openAnchor = (id) => go("anchor", id);
 
   const toggleSet = (setter) => (id) => setter((cur) => {
@@ -573,7 +600,9 @@ export default function App() {
     recentProjects.find((p) => p.id === selectedId) ||
     exploreProjects.find((p) => p.id === selectedId) ||
     (fetchedProject?.id === selectedId ? fetchedProject : null);
-  const fellow = fellows.find((f) => f.id === selectedId);
+  const fellow =
+    fellows.find((f) => f.id === selectedId) ||
+    (fetchedFellow?.id === selectedId ? fetchedFellow : null);
   const campus = getCampus(selectedId);
   const anchor = ANCHORS.find((a) => a.id === selectedId);
 
