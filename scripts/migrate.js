@@ -4,7 +4,7 @@ import path from "path";
 import pg from "pg";
 import dotenv from "dotenv";
 
-// Load environment variables from .env or .env.local if present
+// Load environment variables locally
 dotenv.config();
 dotenv.config({ path: ".env.local" });
 
@@ -12,9 +12,9 @@ const dbUrl = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
 
 async function runMigrations() {
   if (!dbUrl) {
-    console.log("[migrate] No DATABASE_URL found in environment.");
-    console.log("[migrate] Skipping automated database migrations (set DATABASE_URL in Vercel to enable).");
-    process.exit(0);
+    console.error("[migrate] Error: No DATABASE_URL or SUPABASE_DB_URL found in the local environment.");
+    console.error("[migrate] Please ensure your database connection string is configured in .env or .env.local.");
+    process.exit(1);
   }
 
   const { Client } = pg;
@@ -28,13 +28,15 @@ async function runMigrations() {
     console.log("[migrate] Connecting to database...");
     await client.connect();
 
-    // 1. Ensure migrations table exists
+    // 1. Ensure migrations table exists and enable RLS
     await client.query(`
       CREATE TABLE IF NOT EXISTS _schema_migrations (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL UNIQUE,
         applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+      ALTER TABLE _schema_migrations ENABLE ROW LEVEL SECURITY;
+      REVOKE ALL ON TABLE _schema_migrations FROM anon, authenticated;
     `);
 
     // 2. Fetch already applied migrations
