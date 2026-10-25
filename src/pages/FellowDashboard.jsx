@@ -1,15 +1,19 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
-import { CheckCircle2, ExternalLink, Eye, FolderKanban, Heart, Pencil, Plus, Sparkles, Trash2, Users } from "lucide-react";
+import { CheckCircle2, ExternalLink, Eye, FolderKanban, Heart, MessageSquare, Pencil, Plus, Sparkles, Trash2, Users } from "lucide-react";
 import { Avatar, Badge, GhostButton, PrimaryButton, StatusDot } from "../components/ui";
 import { C } from "../lib/theme";
 import { CAMPUSES } from "../lib/data";
+import { ProjectComments } from "../components/ProjectComments";
+import { fetchCommentCounts } from "../lib/comments";
 
 /* -------------------------------- fellow dashboard ------------------------------- */
 
 export function FellowDashboard({ go, openProject, onEdit, onProjectDeleted, session, profile, isMentor, headRequest, isOwner, pendingHeadCount, discordLink, discordNotice, connectingDiscord, onConnectDiscord, onDismissDiscordNotice }) {
   const [myProjects, setMyProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
+  const [openComments, setOpenComments] = useState(null);
+  const [commentCounts, setCommentCounts] = useState({});
   const [deletingId, setDeletingId] = useState(null);
 
   const handleDelete = async (p) => {
@@ -41,6 +45,7 @@ export function FellowDashboard({ go, openProject, onEdit, onProjectDeleted, ses
           return;
         }
         setMyProjects(data || []);
+        fetchCommentCounts((data || []).filter((p) => !p.is_portfolio).map((p) => p.id)).then(setCommentCounts);
       });
   }, [session]);
 
@@ -142,7 +147,8 @@ export function FellowDashboard({ go, openProject, onEdit, onProjectDeleted, ses
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {myProjects.map((p) => (
-            <div key={p.id} style={{ border: `1px solid ${C.line}`, borderRadius: 12, padding: 16, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+            <div key={p.id} style={{ border: `1px solid ${C.line}`, borderRadius: 12, padding: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
               {isMentor && (
                 <div
                   onClick={() => openProject(p.id)}
@@ -173,7 +179,7 @@ export function FellowDashboard({ go, openProject, onEdit, onProjectDeleted, ses
                   </p>
                 )}
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {isMentor && (
                   <PrimaryButton
                     small
@@ -181,6 +187,11 @@ export function FellowDashboard({ go, openProject, onEdit, onProjectDeleted, ses
                   >
                     <ExternalLink size={13} /> View
                   </PrimaryButton>
+                )}
+                {!p.is_portfolio && (
+                  <GhostButton small onClick={() => setOpenComments((cur) => (cur === p.id ? null : p.id))}>
+                    <MessageSquare size={13} /> Mentor feedback{commentCounts[p.id] ? ` (${commentCounts[p.id]})` : ""}
+                  </GhostButton>
                 )}
                 <GhostButton small onClick={() => { onEdit?.(p.id); go("submit"); }}><Pencil size={13} /> Edit</GhostButton>
                 <GhostButton
@@ -192,6 +203,13 @@ export function FellowDashboard({ go, openProject, onEdit, onProjectDeleted, ses
                   <Trash2 size={13} />
                 </GhostButton>
               </div>
+            </div>
+            {openComments === p.id && (
+              <ProjectComments
+                project={p}
+                onCountChange={(n) => setCommentCounts((cur) => ({ ...cur, [p.id]: n }))}
+              />
+            )}
             </div>
           ))}
         </div>
