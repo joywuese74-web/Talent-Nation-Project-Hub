@@ -122,12 +122,3 @@ The database schema is currently managed in the Supabase dashboard and is not st
 - [Mentors, Heads of Campus and portfolios](docs/mentors-and-portfolios.md)
 - [Discord notifications](docs/discord-notifications.md)
 
-## Contributing
-
-1. Pick an open [issue](https://github.com/joywuese74-web/Talent-Nation-Project-Hub/issues) (or open one) and comment that you're working on it.
-2. Create a branch from `main` with a descriptive name, e.g. `feat/project-ratings` or `fix/footer-year`.
-3. Make your changes and run `npm run lint` and `npm run build` before pushing.
-4. Open a pull request into `main`. Describe **what** changed and **why**, and link the issue (e.g. `Closes #23`).
-5. Wait for a review before merging.
-
-Keep each pull request focused on one issue or change so it's easy to review.

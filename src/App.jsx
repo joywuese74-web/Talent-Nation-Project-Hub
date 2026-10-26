@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
 import { fetchAll } from "./lib/fetchAll";
 import { DISCORD_FUNCTION } from "./lib/constants";
-import { ANCHORS, CAMPUSES, PROJECTS, fellowsByCampus, getCampus } from "./lib/data";
+import { ANCHORS, CAMPUSES, PROJECTS, fellowName, fellowsByCampus, getCampus } from "./lib/data";
 import { C, FONTS } from "./lib/theme";
 import { NavBar } from "./components/NavBar";
 import { HomePage } from "./pages/HomePage";
