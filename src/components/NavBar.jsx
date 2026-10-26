@@ -32,7 +32,7 @@ export function NavBar({ view, go, role, displayName, avatarUrl, onLogout, mobil
               onClick={() => go(key)}
               style={{
                 display: window.innerWidth < 900 ? "none" : "inline-block",
-                background: "none", border: "none", cursor: "pointer",
+                border: "none", cursor: "pointer",
                 padding: "8px 12px", borderRadius: 8, fontSize: 13.5, fontWeight: 600,
                 color: view === key ? C.ink : C.slate,
                 background: view === key ? C.paperDeep : "transparent",
